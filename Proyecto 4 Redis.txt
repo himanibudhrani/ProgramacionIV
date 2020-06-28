@@ -1,0 +1,115 @@
+import os
+import redis as rd
+
+r=rd.Redis("localhost", decode_responses=True)
+
+r.config_set("dir",os.path.dirname(os.path.abspath(__file__)))
+
+def cont():
+    while True:
+        try:
+            mar=int(input(""" \nSelecciona la opcion que desees:
+            1) Añadir una palabra
+            2) Editar palabra existente
+            3) Eliminar palabra existente
+            4) Ver Listado de palabras
+            5) Buscar el significado de una palabra
+            6) Salir
+            """))
+        except:
+            print("Error... Ingrese del 1-6")
+        else:
+            if mar in range(1,6):
+                return mar
+            elif mar==6:
+                return None
+            else:
+                print("Error... Intente nuevamente")
+
+def main(anti=True):
+    print("Diccionario de Gerga Panameña")
+    while anti:
+        anti=cont()
+        if anti==1:
+            print(agregar())
+        elif anti==2:
+            diccionario=input("Ingrese el diccionario que desea editar ")
+            arriba=editar(diccionario.strip())
+            print(arriba)
+        elif anti==3:
+            diccionario=input("Ingrese el diccionario que desea elimnar: ")
+            arriba=eliminar(diccionario.strip())
+            print(arriba)
+        elif anti==4:
+            actualizar()
+        elif anti==5:
+            diccionario=input("Ingrese ek diccionario que desea encontrar: ")
+            respuesta=get_def(diccionario.strip())
+            print(respuesta)
+    print("Que tenga un buen dia")
+    r.bgsave()
+
+def agregar():
+  
+    while True:
+        diccionario=input("Introduzca la palabra que desea agregar: ")
+        respuesta=input("Introduzca la respuesta de la palabra: ")
+        try:
+            r.hset("diccionarios",diccionario,respuesta)
+        except Exception as e:
+            print(e)
+        else:
+            print("La palabra fue agregada")
+            break
+    return f"{diccionario} significa {respuesta}"
+
+def editar(diccionario):
+
+    if r.hget("diccionarios",diccionario):
+        respuesta=input("Escriba la nueva respuesta del diccionario seleccionado ")
+        try:
+            r.hset("diccionarios",diccionario,respuesta)
+        except Exception as e:
+            return e
+        else:
+            return "Palabra fue actualizado..."
+    else:
+        return "La palabra no existe.."
+    
+
+def eliminar(diccionario):
+
+    if r.hget("diccionarios",diccionario):
+        try:
+            r.hdel("diccionarios",diccionario)
+        except Exception as e:
+            return e
+        else:
+            return "Palabra fue eliminada"
+    else:
+        return "La palabra no existe.."
+
+def actualizar():
+ 
+    try:
+        palabras=r.hllave("diccionarios")
+        valores=r.hvals("diccionarios")
+    except Exception as e:
+        return (e)
+    else:
+        for llave,valor in zip(palabras,valores):
+            print("-"*50)
+            print(f"La respuesta de {llave} es {valor}")
+            print("-"*50)
+
+def get_def(diccionario):
+ 
+    if r.hget("diccionarios",diccionario):
+        try:
+            respuesta=r.hget("diccionarios", diccionario)
+        except Exception as e:
+            return e
+        else:
+            return f"La respuesta de {diccionario} es {respuesta}"
+    else:
+        return f"La palabra {diccionario} no se existe"
