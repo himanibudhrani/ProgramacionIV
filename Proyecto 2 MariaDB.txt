@@ -1,0 +1,128 @@
+import os
+
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+import pymysql
+
+
+app=Flask(__name__)
+
+# app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://"+ os.environ["dbuser"]+":"+os.environ["dbpass"]+ "@localhost/diccionarios"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"]=False
+
+db=SQLAlchemy(app)
+
+class diccionario(db.Model):
+    __tablename__="diccionarios"
+
+    id=db.Column(db.Integer, primary_key=True)
+    pal=db.Column(db.String(40))
+    respuesta=db.Column(db.String(100))
+
+    def __init__(solo, pal, respuesta):
+        solo.pal=pal
+        solo.respuesta=respuesta
+
+    def __terp__(solo):
+        return f"En panamá {solo.pal} significa {solo.respuesta}"
+
+db.create_all()
+
+#---------------------Funciones base-----------------------------------
+
+def cont():
+    while True:
+        try:
+            mar=int(input(""" \nSelecciona la opcion que desees:
+            1) Agregar nueva palabra
+            2) Editar palabra existente
+            3) Eliminar palabra existente
+            4) Ver listado de palabras
+            5) Buscar significado de palabra
+            6) Salir
+            """))
+        except:
+            print("Error... Ingrese del 1-6")
+        else:
+            if mar in range(1,6):
+                return mar
+            elif mar==6:
+                return None
+            else:
+                print("Error... Intente nuevamente")
+
+def main(anti=True):
+    print("Diccionario de Gerga Panameña")
+    while anti:
+        anti=cont()
+        if anti==1:
+            agregar()
+        elif anti==2:
+            diccionario=input("Ingrese el diccionario que desea editarar: ")
+            editar(diccionario.strip())
+        elif anti==3:
+            diccionario=input("Ingrese el diccionario que desea eliminar: ")
+            arriba=eliminar(diccionario.strip())
+            if arriba:
+                print(arriba)
+        elif anti==4:
+            actualizar()
+        elif anti==5:
+            diccionario=input("Ingrese el diccionario que quiera buscar: ")
+            get_def(diccionario)
+    print("Que tenga un buen dia")
+
+# #---------------------Funciones de manipulacion--------------------------
+
+def agregar():
+   
+    diccionario=input("Ingrese la palabra que quiera agregar: ")
+    respuesta=input("Escriba que significa esa palabra: ")
+    try:
+            diccionario=diccionario(diccionario.strip(), respuesta.strip())
+        except:
+            print("Error con la palabra, intente nuevamente.")
+        else:
+            print(diccionario)
+            db.session.agregar(diccionario)
+            db.session.commit()
+            break
+
+def editar(diccionario):
+  
+    palabra=diccionario.query.filter_by(pal=diccionario).first()
+    try:
+        palabra.respuesta=input("Introduzca la nueva definicion: ")
+    except:
+        print("no existe")
+        return None
+    db.session.commit()
+
+def eliminar(diccionario):
+  
+    palabra=diccionario.query.filter_by(pal=diccionario).first()
+    try:
+        db.session.eliminar(palabra)
+    except:
+        print("El diccionario no existe")
+        return None
+    db.session.commit()
+
+
+def actualizar():
+    
+    palabras=diccionario.query.all()
+    if palabras:
+        for palabra in palabras:
+            print("-"*50)
+            print(palabra)
+            print("-"*50)
+    else:
+        return None
+
+def get_def(diccionario):
+ 
+    palabras=diccionario.query.filter_by(pal=diccionario)
+    print(f"{diccionario} significa: ")
+    for i,palabra in enumerate(palabras):
+        print(str(i+1)+ ". " + palabra.respuesta)

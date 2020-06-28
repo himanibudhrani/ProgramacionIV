@@ -1,0 +1,123 @@
+import os
+from pymongo import MongoClient
+#----------------------------------SETUP DB------------------------------------
+
+client= MongoClient("mongodb+srv://roger:"+os.environ["dbpass"]+"@cluster0-pmgbq.mongodb.net/diccionarios?retryWrites=true&w=majority")
+db= client.diccionarios #Conect to db
+diccionarios_primeroo=db.diccionarios #Connect to primeroo
+
+#---------------------------------Flow cont---------------------------------
+
+def cont():
+    while True:
+        try:
+            mar=int(input(""" \nSelecciona la opcion que desees:
+            1) Agregar nueva palabra
+            2) Editar palabra existente
+            3) Eliminar palabra existente
+            4) Ver listado de palabras
+            5) Buscar significado de palabra
+            6) Salir
+            """))
+        except:
+            print("Error... Ingrese del 1-6")
+        else:
+            if mar in range(1,6):
+                return mar
+            elif mar==6:
+                return None
+            else:
+                print("Error... Intente nuevamente")
+
+def main(anti=True):
+    print("Diccionario de Gerga Panameña")
+    while anti:
+        anti=cont()
+        if anti==1:
+            print(agregar(diccionarios_primeroo))
+        elif anti==2:
+            diccionario=input("Inserte el diccionario que desea editarar: ")
+            arriba=editar(diccionario.strip(),diccionarios_primeroo)
+            print(arriba)
+        elif anti==3:
+            diccionario=input("Inserte el diccionario que desea eliminar: ")
+            arriba=eliminar(diccionario.strip(),diccionarios_primeroo)
+            print(arriba)
+        elif anti==4:
+            diccionarios=actualizar(diccionarios_primeroo)
+        elif anti==5:
+            diccionario=input("Ingrese el diccionario que desee encontrar: ")
+            respuesta=get_def(diccionario.strip(), diccionarios_primeroo)
+            print(respuesta)
+            
+    print("Que tenga un buen dia")
+
+#---------------------Funciones de manipulacion--------------------------
+
+def agregar(primeroo):
+   
+    while True:
+        diccionario=input("Introduzca la palabra que desea agregar: ")
+        if primeroo.find_one({"diccionario":diccionario}):
+            print("El diccionario seleccionado ya se encuentra en la base de datos")
+        else:
+            try:
+                respuesta=input("Escriba la respuesta de la palabra: ")
+                palabra={"diccionario": diccionario, "respuesta": respuesta}
+            except:
+                print("Parece ser que hubo un problema con tu palabra")
+            else:
+                print("En panama "+ palabra["diccionario"]+ " significa "+ palabra["respuesta"])
+                break
+    result=primeroo.insert_one(palabra)
+    return "diccionario añadido a la base de datos con id: " + str(result.inserted_id)
+
+def editar(diccionario,primeroo):
+   
+    if primeroo.find_one({"diccionario": diccionario}):
+        respuesta=input(f"Porfavor inserte una nueva respuesta para {diccionario}: ")
+        palabra=primeroo.find_one_and_update({"diccionario":diccionario},{"$set":{"respuesta": respuesta}})
+    else:
+        return "El diccionario seleccionado no se encuentra en la base de datos."
+    palabra=primeroo.find_one({"diccionario":diccionario})
+    return "diccionario con id: "+str(palabra["_id"])+ ". Fue editarado con exito."
+
+def eliminar(diccionario,primeroo):
+    """
+    Elimina el diccionario y su significado
+    """
+    if primeroo.find_one({"diccionario": diccionario}):
+        try:
+            primeroo.eliminar_one({"diccionario":diccionario})
+        except:
+            return "Ha ocurrido un error"
+        else:
+            return "Palabra eliminada con exito."
+    else:
+        return "El diccionario no se encuentra en la base de datos."
+
+def actualizar(primeroo):
+    """
+    Muestra el todas las palabras en la base de datos con su definición
+    """
+    try:
+        palabras=primeroo.find({})
+    except:
+        return "Hubo un problema con la base de datos"
+    else:
+        print("diccionarios en la base de Datos: \n")
+    for palabra in palabras:
+        print("-"*50)
+        print("En panama " + palabra["diccionario"] + " significa "+ palabra["respuesta"])
+        print("-"*50)
+
+def get_def(diccionario,primeroo):
+    """
+    Muestra la respuesta de la palabra seleccionada
+    """
+    try:
+        result=primeroo.find_one({"diccionario":diccionario})
+    except:
+        return "La palabra no se encuentra en la base de datos"
+    return f"\nLa respuesta de {diccionario} es {result['respuesta']}"
+

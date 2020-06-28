@@ -1,0 +1,138 @@
+import sqlite3
+from classes import diccionario
+
+conn=sqlite3.connect("tarea1.db")
+
+c=conn.cursor()
+
+#Quitar el comentario en caso de desear modificar la tabla o crearla si la DB no cuenta con ella
+
+# c.execute("""CREATE TABLE diccionarios (
+#             diccionario text,
+#             respuesta text
+#             )""") 
+
+#---------------------Funciones base-----------------------------------
+
+def cont():
+    while True:
+        try:
+            mar=int(input(""" \nSelecciona la opcion que desees:
+            1) Agregar nueva palabra
+            2) Editar palabra existente
+            3) Eliminar palabra existente
+            4) Ver listado de palabras
+            5) Buscar significado de palabra
+            6) Salir
+            """))
+        except:
+            print("Error... Ingrese del 1-6")
+        else:
+            if mar in range(1,6):
+                return mar
+            elif mar==6:
+                return None
+            else:
+                print("Error... Intente nuevamente")
+
+def main(anti=True):
+    print("Diccionario de Gerga Panameña")
+    while anti:
+        anti=cont()
+        if anti==1:
+            agregar()
+        elif anti==2:
+            diccionario=input("Ingrese el diccionario que desea editarar: ")
+            arriba=editar(diccionario.strip())
+            if not arriba:
+                print("La palabra no se encuentra en la base de datos")
+            else:
+                print(arriba)
+        elif anti==3:
+            diccionario=input("Ingrese el diccionario que desea eliminar: ")
+            arriba=eliminar(diccionario.strip())
+            if arriba:
+                print(arriba)
+        elif anti==4:
+            diccionarios=actualizar()
+            if diccionarios:
+                for diccionario,resp in diccionarios:
+                    print("-"*50)
+                    print(f"En Panama {diccionario} significa {resp}")
+                    print("-"*50)
+        elif anti==5:
+            diccionario=input("Ingrese el diccionario que quiera buscar: ")
+            respes=get_def(diccionario)
+            if respes:
+                for resp in respes:
+                    print(f"\n{diccionario} significa {resp[0]}")
+            else:
+                print("Error,.. Palabra no existe")
+    print("Que tenga un buen dia")
+
+#---------------------Funciones de manipulacion--------------------------
+
+def agregar():
+  
+    while True:
+        diccionario=input("Ingrese la palabra que quiera agregar: ")
+        respuesta=input("Escriba que significa esa palabra: ")
+        try:
+            diccionario=diccionario(diccionario.strip(), respuesta.strip())
+        except:
+            print("Error con la palabra, intente nuevamente.")
+        else:
+            print(diccionario)
+            break
+    with conn:
+        c.execute("INSERT INTO diccionarios VALUES (:diccionario,:respuesta)", {"diccionario":diccionario.diccionario, "respuesta": diccionario.respuesta}) 
+        print("diccionario añadido a la base de datos")
+        return diccionario
+
+def editarar(diccionario):
+
+    c.execute("SELECT respuesta FROM diccionarios WHERE diccionario=:diccionario",{"diccionario":diccionario})
+    if not c.fetchone():
+        print("El diccionario no existe..")
+        return None
+    respuesta=input("introduzca la nueva definicion: {}: ".format(diccionario))
+    with conn:
+        try:
+            c.execute("UPDATE diccionarios SET respuesta= :respuesta WHERE diccionario=:diccionario", {"respuesta":respuesta, "diccionario":diccionario})
+        except:
+            print("Error")
+            return None
+    return "Actualizado!"
+
+def eliminar(diccionario):
+ 
+    c.execute("SELECT respuesta FROM diccionarios WHERE diccionario=:diccionario",{"diccionario":diccionario})
+    if not c.fetchone():
+        print("El diccionario no existe")
+        return None
+    with conn:
+        try:
+            c.execute("eliminar FROM diccionarios where diccionario=:diccionario", {"diccionario":diccionario})
+        except:
+            print("Error. Intente nuevamente")
+        return "La palabra ha sido eliminada"
+
+def actualizar():
+    
+    try:
+        c.execute("SELECT * FROM diccionarios")
+    except:
+        print("Error.. intente Nuevamente")
+        return None
+    return c.fetchall()
+
+def get_def(diccionario):
+ 
+    try:
+        c.execute("SELECT respuesta FROM diccionarios WHERE diccionario=:diccionario",{"diccionario":diccionario})
+    except:
+        print("Error.. intente Nuevamente")
+        return None
+    return c.fetchall()
+
+
